@@ -4,6 +4,7 @@ import requests
 import keyboard
 import threading
 import sys
+import os
 from PIL import Image, ImageDraw
 from datetime import datetime
 import time
@@ -19,27 +20,22 @@ class CloudClipboardTray:
         self.last_status = "Ready"
         
     def create_icon_image(self):
-        """Create a paperclip icon"""
-        width = 64
-        height = 64
-        image = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        
-        # Draw a paperclip shape
-        # Main curve (outer)
-        draw.arc([15, 10, 45, 40], 180, 360, fill=(70, 130, 180, 255), width=4)
-        # Inner curve  
-        draw.arc([20, 15, 40, 35], 180, 360, fill=(70, 130, 180, 255), width=3)
-        # Straight parts
-        draw.line([30, 40, 30, 55], fill=(70, 130, 180, 255), width=4)
-        draw.line([15, 25, 15, 45], fill=(70, 130, 180, 255), width=4)
-        # Bottom curve
-        draw.arc([15, 40, 35, 60], 90, 180, fill=(70, 130, 180, 255), width=4)
-        
-        # Add a small highlight for 3D effect
-        draw.arc([17, 12, 43, 38], 200, 340, fill=(135, 185, 230, 255), width=2)
-        
-        return image
+        """Load paperclip icon from file"""
+        try:
+            # Get the directory where this script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(script_dir, '..', 'assets', 'paper-clip.png')
+            
+            # Load and resize the image
+            image = Image.open(icon_path)
+            # Resize to 64x64 if needed
+            image = image.resize((64, 64), Image.Resampling.LANCZOS)
+            return image
+        except Exception as e:
+            print(f"Warning: Could not load icon file: {e}")
+            # Fallback to a simple colored square
+            image = Image.new('RGBA', (64, 64), (70, 130, 180, 255))
+            return image
     
     def send_clipboard(self):
         """Send current clipboard content to cloud"""
