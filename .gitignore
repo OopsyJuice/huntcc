@@ -30,4 +30,4 @@ config.json
 
 # Logs
 *.log
-logs/
+logs/clipboard_config.json
