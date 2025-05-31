@@ -1,0 +1,17 @@
+# Cloud Clipboard - All Dependencies
+# Required for the combined app.py to run
+
+# Backend API dependencies
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# Client dependencies  
+pyperclip==1.8.2
+requests==2.31.0
+pystray==0.19.4
+Pillow==10.1.0
+
+# Optional hotkey support (may fail on some systems)
+keyboard==0.13.5
