@@ -1,9 +1,11 @@
-click==7.1.2
-Flask==1.1.4
-itsdangerous==1.1.0
-Jinja2==2.11.3
-MarkupSafe==1.1.1
-Pillow==6.2.2
-qrcode==6.1
-six==1.17.0
-Werkzeug==1.0.1
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# Client dependencies
+pyperclip==1.8.2
+requests==2.31.0
+pystray==0.19.4
+Pillow==10.1.0
+keyboard==0.13.5

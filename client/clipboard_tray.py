@@ -46,23 +46,72 @@ class CloudClipboardTray:
         except Exception as e:
             print(f"Could not save config: {e}")
     
-    def get_session_id(self):
-        """Prompt user for session ID via terminal"""
+    def start_session(self, icon=None, item=None):
+        """Generate new 6-digit session code"""
         try:
-            current = f" (current: {self.session_id})" if self.session_id else ""
-            print(f"\nHostname: {self.hostname}")
-            session_id = input(f"Enter session ID (numeric){current}: ").strip()
+            response = requests.post(
+                f"{self.api_url}/session/start",
+                headers=self.headers,
+                timeout=5
+            )
             
-            if session_id:
-                self.session_id = session_id
+            if response.status_code == 200:
+                data = response.json()
+                self.session_id = data["session_id"]
                 self.save_config()
+                self.show_notification(f"✓ Session {self.session_id} started")
+                print(f"\n=== NEW SESSION STARTED ===")
+                print(f"Session Code: {self.session_id}")
+                print(f"Share this code with the other machine")
+                print(f"==============================")
+                # Update menu
+                if self.icon:
+                    self.icon.menu = self.create_menu()
                 return True
-            elif self.session_id:
-                # Keep current session if just pressed enter
-                return True
+            else:
+                self.show_notification(f"✗ Start failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.show_notification(f"✗ Start error: {str(e)[:30]}")
             return False
+    
+    def join_session(self, icon=None, item=None):
+        """Join existing session by entering session code"""
+        print(f"\n--- Join Session ---")
+        print(f"Current session: {self.session_id or 'None'}")
+        print(f"Hostname: {self.hostname}")
+        
+        try:
+            session_code = input("Enter 6-digit session code: ").strip()
+            if session_code and len(session_code) == 6 and session_code.isdigit():
+                # Test if session exists by trying to get its status
+                response = requests.get(
+                    f"{self.api_url}/session/{session_code}/status",
+                    headers=self.headers,
+                    timeout=5
+                )
+                
+                if response.status_code == 200:
+                    self.session_id = session_code
+                    self.save_config()
+                    self.show_notification(f"✓ Joined session {self.session_id}")
+                    print(f"Successfully joined session: {self.session_id}")
+                    # Update menu
+                    if self.icon:
+                        self.icon.menu = self.create_menu()
+                else:
+                    print("Session not found or expired")
+                    self.show_notification("Session not found")
+            else:
+                print("Invalid session code (must be 6 digits)")
+                self.show_notification("Invalid session code")
         except (KeyboardInterrupt, EOFError):
-            return False
+            print("Join cancelled")
+            self.show_notification("Join cancelled")
+        except Exception as e:
+            print(f"Error joining session: {e}")
+            self.show_notification(f"Join error: {str(e)[:30]}")
     
     def create_icon_image(self):
         """Load paperclip icon from file"""
@@ -85,7 +134,7 @@ class CloudClipboardTray:
     def send_clipboard(self, icon=None, item=None):
         """Send current clipboard content to cloud"""
         if not self.session_id:
-            self.show_notification("No session ID set")
+            self.show_notification("No session active")
             return False
             
         try:
@@ -115,7 +164,7 @@ class CloudClipboardTray:
     def get_clipboard(self, icon=None, item=None):
         """Get latest clipboard content from cloud"""
         if not self.session_id:
-            self.show_notification("No session ID set")
+            self.show_notification("No session active")
             return False
             
         try:
@@ -159,6 +208,7 @@ class CloudClipboardTray:
             
             if response.status_code == 200:
                 self.show_notification(f"✓ Session {self.session_id} ended")
+                print(f"Session {self.session_id} ended")
                 self.session_id = None
                 self.save_config()
                 # Update menu
@@ -169,29 +219,6 @@ class CloudClipboardTray:
                 
         except Exception as e:
             self.show_notification(f"✗ End session error: {str(e)[:30]}")
-    
-    def change_session(self, icon=None, item=None):
-        """Change to a different session"""
-        print(f"\n--- Session Change Requested ---")
-        print(f"Current session: {self.session_id or 'None'}")
-        print(f"Hostname: {self.hostname}")
-        
-        try:
-            new_session = input("Enter new session ID (numeric): ").strip()
-            if new_session:
-                self.session_id = new_session
-                self.save_config()
-                self.show_notification(f"✓ Switched to session {self.session_id}")
-                print(f"Switched to session: {self.session_id}")
-                # Update menu
-                if self.icon:
-                    self.icon.menu = self.create_menu()
-            else:
-                print("Session change cancelled")
-                self.show_notification("Session change cancelled")
-        except (KeyboardInterrupt, EOFError):
-            print("Session change cancelled")
-            self.show_notification("Session change cancelled")
     
     def show_notification(self, message):
         """Update the icon tooltip with status message"""
@@ -218,7 +245,7 @@ class CloudClipboardTray:
         """Create the system tray menu"""
         menu_items = []
         
-        # Session info
+        # Session info and controls
         if self.session_id:
             menu_items.extend([
                 pystray.MenuItem(f"Session: {self.session_id}", None, enabled=False),
@@ -229,15 +256,17 @@ class CloudClipboardTray:
                 pystray.MenuItem("Show History", self.show_history),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("End Session", self.end_session),
-                pystray.MenuItem("Change Session", self.change_session),
             ])
         else:
             menu_items.extend([
-                pystray.MenuItem("No Session Set", None, enabled=False),
-                pystray.MenuItem("Set Session ID", self.change_session),
+                pystray.MenuItem("No Active Session", None, enabled=False),
+                pystray.Menu.SEPARATOR,
             ])
         
+        # Session management (always available)
         menu_items.extend([
+            pystray.MenuItem("Start New Session", self.start_session),
+            pystray.MenuItem("Join Session", self.join_session),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(f"Status: {self.last_status}", None, enabled=False),
             pystray.Menu.SEPARATOR,
@@ -249,7 +278,7 @@ class CloudClipboardTray:
     def show_history(self, icon=None, item=None):
         """Show clipboard history in console"""
         if not self.session_id:
-            print("No session ID set")
+            print("No session active")
             return
             
         try:
@@ -289,15 +318,10 @@ class CloudClipboardTray:
         print("Starting Cloud Clipboard...")
         print(f"Hostname: {self.hostname}")
         
-        # Get session ID if not set (but don't require it)
-        if not self.session_id:
-            print("No session ID configured. You can set one from the tray menu.")
-            # Don't exit, just continue without a session
-        
         if self.session_id:
-            print(f"Using session ID: {self.session_id}")
+            print(f"Resuming session: {self.session_id}")
         else:
-            print("Starting without a session - use tray menu to set one.")
+            print("No active session - use tray menu to start or join one")
             
         print("The app will run in the system tray.")
         
