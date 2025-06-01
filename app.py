@@ -25,6 +25,7 @@ import uvicorn
 import pystray
 import pyperclip
 import requests
+from PIL import Image, ImageDraw
 
 # Find available port automatically
 def find_available_port():
@@ -610,8 +611,50 @@ class CloudClipboardTray:
             self.show_notification(f"Join error: {str(e)[:30]}")
     
     def create_icon_image(self):
-        """Use system default tray icon"""
-        return None  # pystray will use default system icon
+        """Load PNG icon from assets folder"""
+        try:
+            # Get the directory where this script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            # Try multiple possible locations for the icon
+            possible_paths = [
+                os.path.join(script_dir, 'assets', 'paper-clip.png'),
+                os.path.join(script_dir, 'legacy', 'assets', 'paper-clip.png'),
+                os.path.join(script_dir, '..', 'assets', 'paper-clip.png'),
+                'assets/paper-clip.png',
+                'paper-clip.png'
+            ]
+            
+            for icon_path in possible_paths:
+                if os.path.exists(icon_path):
+                    print(f"Loading icon from: {icon_path}")
+                    image = Image.open(icon_path)
+                    # Resize to appropriate size for tray
+                    image = image.resize((64, 64), Image.Resampling.LANCZOS)
+                    return image
+            
+            # If no PNG found, show error and create fallback
+            print("Warning: paper-clip.png not found in any of these locations:")
+            for path in possible_paths:
+                print(f"  - {path}")
+            print("Creating fallback icon...")
+            
+        except Exception as e:
+            print(f"Error loading icon: {e}")
+        
+        # Fallback: create simple clipboard icon
+        image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        
+        # Draw simple clipboard shape
+        draw.rectangle([10, 8, 54, 56], fill=(70, 130, 180, 255), outline=(50, 110, 160, 255), width=2)
+        draw.rectangle([20, 6, 44, 14], fill=(200, 200, 200, 255), outline=(150, 150, 150, 255), width=1)
+        
+        # Draw lines representing text
+        for y in [20, 26, 32, 38]:
+            draw.rectangle([16, y, 48, y+2], fill=(255, 255, 255, 255))
+        
+        return image
     
     def send_clipboard(self, icon=None, item=None):
         """Send current clipboard content to cloud"""
