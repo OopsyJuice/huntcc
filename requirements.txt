@@ -11,7 +11,7 @@ python-multipart==0.0.6
 pyperclip==1.8.2
 requests==2.31.0
 pystray==0.19.4
-Pillow==9.5.0
+
 
 # Optional hotkey support (may fail on some systems)
 keyboard==0.13.5

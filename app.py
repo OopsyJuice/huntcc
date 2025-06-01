@@ -25,7 +25,6 @@ import uvicorn
 import pystray
 import pyperclip
 import requests
-from PIL import Image
 
 # Find available port automatically
 def find_available_port():
@@ -611,22 +610,8 @@ class CloudClipboardTray:
             self.show_notification(f"Join error: {str(e)[:30]}")
     
     def create_icon_image(self):
-        """Create simple tray icon"""
-        try:
-            # Get the directory where this script is located
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            icon_path = os.path.join(script_dir, 'assets', 'paper-clip.png')
-            
-            # Load and resize the image
-            image = Image.open(icon_path)
-            # Resize to 64x64 if needed
-            image = image.resize((64, 64), Image.Resampling.LANCZOS)
-            return image
-        except Exception as e:
-            print(f"Warning: Could not load icon file: {e}")
-            # Fallback to a simple colored square
-            image = Image.new('RGBA', (64, 64), (70, 130, 180, 255))
-            return image
+        """Use system default tray icon"""
+        return None  # pystray will use default system icon
     
     def send_clipboard(self, icon=None, item=None):
         """Send current clipboard content to cloud"""
